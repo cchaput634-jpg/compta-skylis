@@ -1,4 +1,5 @@
 import { Coins, HandCoins, LayoutDashboard, LogOut, Settings, Sparkles, Users as UsersIcon } from "lucide-react";
+import logoEgg from "/logo.png";
 import type { DiscordUser } from "@/types";
 
 export type View = "dashboard" | "citizens" | "donations" | "gains" | "expenses";
@@ -33,9 +34,11 @@ export function Nav({
       <div className="card flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between p-3 sm:p-4">
         {/* Branding */}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-sky-500 to-sky-700 grid place-items-center text-ivory shadow-md shadow-sky-500/40">
-            <Coins className="h-5 w-5 text-gold-200" />
-          </div>
+          <img
+            src={logoEgg}
+            alt=""
+            className="h-11 w-auto drop-shadow-[0_4px_8px_rgba(13,148,136,0.35)]"
+          />
           <div>
             <div className="font-display text-xl text-sky-gradient tracking-wider leading-tight">
               Trésor de Skylis

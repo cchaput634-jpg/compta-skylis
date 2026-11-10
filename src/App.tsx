@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Coins } from "lucide-react";
 import { fetchMe, loginWithDiscord, logoutDiscord } from "@/lib/api";
+import logoEgg from "/logo.png";
 import type { MeResponse, PermissionKey } from "@/types";
 import { Nav, type View } from "@/components/Nav";
 import { Dashboard } from "@/components/Dashboard";
@@ -105,9 +105,13 @@ function SplashLoading() {
         animate={{ opacity: 1 }}
         className="text-center"
       >
-        <div className="h-16 w-16 mx-auto rounded-full bg-gradient-to-br from-sky-500 to-sky-700 grid place-items-center shadow-xl shadow-sky-500/30">
-          <Coins className="h-7 w-7 text-gold-200 animate-pulse" />
-        </div>
+        <motion.img
+          src={logoEgg}
+          alt=""
+          className="h-20 w-auto mx-auto drop-shadow-[0_8px_16px_rgba(13,148,136,0.35)]"
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+        />
         <div className="mt-3 font-display text-sky-gradient tracking-wider">
           Chargement du Trésor…
         </div>
@@ -125,9 +129,11 @@ function LoginGate() {
         animate={{ opacity: 1, y: 0 }}
         className="card max-w-md w-full p-8 text-center"
       >
-        <div className="h-16 w-16 mx-auto rounded-full bg-gradient-to-br from-sky-500 to-sky-700 grid place-items-center shadow-xl shadow-sky-500/40">
-          <Coins className="h-8 w-8 text-gold-200" />
-        </div>
+        <img
+          src={logoEgg}
+          alt=""
+          className="h-28 w-auto mx-auto drop-shadow-[0_10px_18px_rgba(13,148,136,0.4)]"
+        />
         <h1 className="mt-4 font-display text-3xl text-sky-gradient tracking-wider title-shimmer">
           Trésor de Skylis
         </h1>
