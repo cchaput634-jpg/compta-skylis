@@ -1,0 +1,23 @@
+{
+  // Configuration Cloudflare Pages + D1.
+  // Secret Discord à poser séparément :
+  //   npx wrangler pages secret put DISCORD_CLIENT_SECRET --project-name=skylis-compta
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "skylis-compta",
+  "compatibility_date": "2025-06-01",
+
+  "pages_build_output_dir": "./dist",
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "skylis-compta-db",
+      "database_id": "REPLACE_WITH_D1_ID"
+    }
+  ],
+
+  "vars": {
+    "DISCORD_CLIENT_ID": "1569744662430748682",
+    "APP_URL": "https://skylis-compta.pages.dev"
+  }
+}
