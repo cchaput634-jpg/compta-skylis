@@ -10,6 +10,7 @@ import type {
   MeResponse,
   Role,
   Summary,
+  TopDonor,
 } from "@/types";
 
 async function apiJson<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -63,6 +64,10 @@ export async function logoutDiscord(): Promise<void> {
 
 export async function fetchSummary(): Promise<Summary | null> {
   return apiJson<Summary>("/api/summary");
+}
+
+export async function fetchTopDonors(limit = 10): Promise<TopDonor[]> {
+  return (await apiJson<TopDonor[]>(`/api/stats/top-donors?limit=${limit}`)) ?? [];
 }
 
 /* ===== Citoyens ===== */

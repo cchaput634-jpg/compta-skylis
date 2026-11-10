@@ -5,7 +5,7 @@
  * Change-la ici et toute l'application se met à jour.
  */
 
-export const CURRENCY = "Souffles";
+export const CURRENCY = "Couronnes";
 export const CURRENCY_SHORT = "⚜"; // symbole doré compact
 
 /* Libellé des permissions, pour l'admin et les tooltips. */

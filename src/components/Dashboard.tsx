@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
-import { Coins, HandCoins, Scale, Users as UsersIcon } from "lucide-react";
-import { fetchSummary } from "@/lib/api";
+import { Coins, Crown, HandCoins, Medal, Scale, Users as UsersIcon } from "lucide-react";
+import { fetchSummary, fetchTopDonors } from "@/lib/api";
 import { formatAmount } from "@/lib/format";
 import { CURRENCY } from "@/lib/config";
-import type { Summary } from "@/types";
+import type { Summary, TopDonor } from "@/types";
 
 export function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [topDonors, setTopDonors] = useState<TopDonor[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const s = await fetchSummary();
+      const [s, t] = await Promise.all([fetchSummary(), fetchTopDonors(10)]);
       if (!cancelled) {
         setSummary(s);
+        setTopDonors(t);
         setLoading(false);
       }
     })();
@@ -22,6 +24,8 @@ export function Dashboard() {
       cancelled = true;
     };
   }, []);
+
+  const hasDonors = (topDonors?.length ?? 0) > 0;
 
   return (
     <section className="w-full max-w-6xl mx-auto px-4 sm:px-8 pt-6">
@@ -94,18 +98,112 @@ export function Dashboard() {
 
       <hr className="section-divider" />
 
-      <div className="card p-6">
-        <h2 className="font-display text-xl text-sky-gradient tracking-wider mb-2">
-          Bienvenue, gardien·ne du Trésor
-        </h2>
-        <p className="text-ink-soft">
-          Choisis une rubrique dans la barre du haut pour tenir le registre
-          des citoyens, inscrire un nouveau don ou enregistrer une dépense
-          de la nation. Les droits de chaque main sur le Trésor sont réglés
-          dans le panneau d'administration.
-        </p>
-      </div>
+      {hasDonors ? (
+        <TopDonorsCard donors={topDonors!} />
+      ) : (
+        <div className="card p-6">
+          <h2 className="font-display text-xl text-sky-gradient tracking-wider mb-2">
+            Bienvenue, gardien·ne du Trésor
+          </h2>
+          <p className="text-ink-soft">
+            Choisis une rubrique dans la barre du haut pour tenir le registre
+            des citoyens, inscrire un nouveau don ou enregistrer une dépense
+            de la nation. Les droits de chaque main sur le Trésor sont réglés
+            dans le panneau d'administration.
+          </p>
+        </div>
+      )}
     </section>
+  );
+}
+
+function TopDonorsCard({ donors }: { donors: TopDonor[] }) {
+  const grandTotal = donors.reduce((s, d) => s + d.total, 0);
+  return (
+    <div className="card-gold p-6">
+      <div className="flex items-center gap-2 mb-1">
+        <Crown className="h-5 w-5 text-gold-700" />
+        <h2 className="font-display text-xl text-gold-gradient tracking-wider">
+          Meilleurs donateurs
+        </h2>
+      </div>
+      <p className="text-ink-soft text-sm italic">
+        Les plus généreuses âmes ayant soutenu la Nation.
+      </p>
+      <hr className="section-divider" />
+      <ol className="space-y-2">
+        {donors.map((d, i) => {
+          const share = grandTotal > 0 ? (d.total / grandTotal) * 100 : 0;
+          const rank = i + 1;
+          return (
+            <li
+              key={`${d.citizen_id ?? "label"}-${d.display_name ?? d.label ?? i}`}
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/70 transition-colors"
+            >
+              <RankBadge rank={rank} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="font-medium truncate">
+                    {d.display_name ?? "(donateur retiré)"}
+                  </span>
+                  {d.title && (
+                    <span className="badge-gold badge text-xs">{d.title}</span>
+                  )}
+                  {!d.citizen_id && d.label && (
+                    <span className="text-xs italic text-ink-soft">
+                      (libre)
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 bg-sky-100 rounded-full overflow-hidden min-w-20 max-w-xs">
+                    <div
+                      className="h-full bg-gradient-to-r from-gold-300 to-gold-600"
+                      style={{ width: `${Math.max(2, share)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-ink-soft whitespace-nowrap">
+                    {d.n} don{d.n > 1 ? "s" : ""}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right font-display text-gold-gradient text-lg whitespace-nowrap">
+                {formatAmount(d.total)}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function RankBadge({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <div className="h-9 w-9 grid place-items-center rounded-full bg-gradient-to-br from-gold-300 to-gold-600 text-white shadow-md shadow-gold-500/40">
+        <Crown className="h-4 w-4" />
+      </div>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <div className="h-9 w-9 grid place-items-center rounded-full bg-gradient-to-br from-slate-200 to-slate-400 text-slate-700 shadow-sm">
+        <Medal className="h-4 w-4" />
+      </div>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <div className="h-9 w-9 grid place-items-center rounded-full bg-gradient-to-br from-amber-400 to-amber-700 text-white shadow-sm">
+        <Medal className="h-4 w-4" />
+      </div>
+    );
+  }
+  return (
+    <div className="h-9 w-9 grid place-items-center rounded-full bg-white border border-sky-200 text-sky-800 font-display">
+      {rank}
+    </div>
   );
 }
 

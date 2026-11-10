@@ -57,6 +57,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (section === "donations") return handleDonations(request, env, parts);
   if (section === "expenses") return handleExpenses(request, env, parts);
   if (section === "summary") return handleSummary(request, env, parts);
+  if (section === "stats") return handleStats(request, env, parts);
   if (section === "admin") return handleAdmin(request, env, parts);
 
   return json({ error: "Route inconnue" }, 404);
@@ -407,6 +408,64 @@ async function handleSummary(
         ? (donRow?.total ?? 0) - (expRow?.total ?? 0)
         : null,
   });
+}
+
+/* =========================================================
+   STATS (classements)
+   ========================================================= */
+
+async function handleStats(
+  request: Request,
+  env: Env,
+  parts: string[],
+): Promise<Response> {
+  if (request.method !== "GET") return json({ error: "Route inconnue" }, 404);
+
+  // GET /api/stats/top-donors
+  if (parts[2] === "top-donors" && !parts[3]) {
+    const guard = await requirePermissionAny(env, request, [
+      "donations.view",
+      "donations.edit",
+    ]);
+    if (guard instanceof Response) return guard;
+
+    const url = new URL(request.url);
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10) || 20),
+    );
+
+    const rows = await env.DB.prepare(
+      `SELECT
+          d.citizen_id,
+          COALESCE(c.name, d.citizen_label) AS display_name,
+          c.title AS title,
+          d.citizen_label AS label,
+          SUM(d.amount) AS total,
+          COUNT(*) AS n,
+          MAX(d.occurred_at) AS last_donation
+        FROM donations d
+        LEFT JOIN citizens c ON c.id = d.citizen_id
+        WHERE d.citizen_id IS NOT NULL OR d.citizen_label IS NOT NULL
+        GROUP BY COALESCE(d.citizen_id, 'label:' || COALESCE(d.citizen_label, ''))
+        ORDER BY total DESC
+        LIMIT ?`,
+    )
+      .bind(limit)
+      .all<{
+        citizen_id: string | null;
+        display_name: string | null;
+        title: string | null;
+        label: string | null;
+        total: number;
+        n: number;
+        last_donation: number;
+      }>();
+
+    return json(rows.results ?? []);
+  }
+
+  return json({ error: "Route inconnue" }, 404);
 }
 
 /* =========================================================

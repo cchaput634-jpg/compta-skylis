@@ -59,6 +59,16 @@ export interface Expense {
   created_at: number;
 }
 
+export interface TopDonor {
+  citizen_id: string | null;
+  display_name: string | null;
+  title: string | null;
+  label: string | null;
+  total: number;
+  n: number;
+  last_donation: number;
+}
+
 export interface Summary {
   donations: { n: number; total: number } | null;
   expenses: { n: number; total: number } | null;
