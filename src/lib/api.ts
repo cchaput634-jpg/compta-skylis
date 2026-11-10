@@ -157,6 +157,7 @@ export async function updateDonation(
     amount?: number;
     occurred_at?: number;
     description?: string;
+    in_vault?: boolean;
   },
 ): Promise<void> {
   await apiJson<{ ok: boolean }>(`/api/donations/${encodeURIComponent(id)}`, {

@@ -46,6 +46,7 @@ export interface Donation {
   description: string | null;
   created_by: string;
   created_at: number;
+  in_vault: number; // 0 ou 1
 }
 
 export interface Expense {

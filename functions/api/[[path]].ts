@@ -169,7 +169,7 @@ async function handleDonations(
     if (guard instanceof Response) return guard;
     const rows = await env.DB.prepare(
       `SELECT d.id, d.citizen_id, d.citizen_label, d.amount, d.occurred_at,
-              d.description, d.created_by, d.created_at,
+              d.description, d.created_by, d.created_at, d.in_vault,
               c.name AS citizen_name, c.title AS citizen_title
          FROM donations d
          LEFT JOIN citizens c ON c.id = d.citizen_id
@@ -226,17 +226,38 @@ async function handleDonations(
       .first();
     if (!existing) return json({ error: "Don inconnu" }, 404);
     const body = await readJsonBody(request);
+
+    // Toggle rapide « mis dans le coffre » : si le body ne contient QUE in_vault,
+    // on fait un UPDATE léger sans toucher au reste.
+    if (
+      Object.prototype.hasOwnProperty.call(body, "in_vault") &&
+      Object.keys(body).length === 1
+    ) {
+      await env.DB.prepare(
+        "UPDATE donations SET in_vault = ? WHERE id = ?",
+      )
+        .bind(body.in_vault ? 1 : 0, id)
+        .run();
+      return json({ ok: true });
+    }
+
     const amount = num(body.amount);
     const occurred = num(body.occurred_at);
     const citizenId = str(body.citizen_id);
     const citizenLabel = str(body.citizen_label);
+    const inVault = Object.prototype.hasOwnProperty.call(body, "in_vault")
+      ? body.in_vault
+        ? 1
+        : 0
+      : null;
     await env.DB.prepare(
       `UPDATE donations
           SET citizen_id    = ?,
               citizen_label = ?,
               amount        = COALESCE(?, amount),
               occurred_at   = COALESCE(?, occurred_at),
-              description   = ?
+              description   = ?,
+              in_vault      = COALESCE(?, in_vault)
         WHERE id = ?`,
     )
       .bind(
@@ -245,6 +266,7 @@ async function handleDonations(
         amount !== null && amount > 0 ? amount : null,
         occurred,
         str(body.description),
+        inVault,
         id,
       )
       .run();
@@ -896,7 +918,8 @@ async function ensureSchema(env: Env) {
     `CREATE TABLE IF NOT EXISTS donations (
        id TEXT PRIMARY KEY, citizen_id TEXT, citizen_label TEXT,
        amount INTEGER NOT NULL, occurred_at INTEGER NOT NULL,
-       description TEXT, created_by TEXT NOT NULL, created_at INTEGER NOT NULL
+       description TEXT, created_by TEXT NOT NULL, created_at INTEGER NOT NULL,
+       in_vault INTEGER NOT NULL DEFAULT 0
      )`,
     `CREATE TABLE IF NOT EXISTS expenses (
        id TEXT PRIMARY KEY, label TEXT NOT NULL, category TEXT,

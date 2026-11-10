@@ -86,6 +86,7 @@ export function DonationsPage({ canEdit }: Props) {
                 <th>Donateur</th>
                 <th className="text-right">Montant</th>
                 <th>Description</th>
+                <th className="text-center w-24">Coffre</th>
                 {canEdit && <th className="w-32 text-right">Actions</th>}
               </tr>
             </thead>
@@ -93,7 +94,7 @@ export function DonationsPage({ canEdit }: Props) {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={canEdit ? 5 : 4}
+                    colSpan={canEdit ? 6 : 5}
                     className="text-center text-ink-soft py-6"
                   >
                     Chargement…
@@ -102,7 +103,7 @@ export function DonationsPage({ canEdit }: Props) {
               ) : donations.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={canEdit ? 5 : 4}
+                    colSpan={canEdit ? 6 : 5}
                     className="text-center text-ink-soft py-6 italic"
                   >
                     Aucun don enregistré.
@@ -139,6 +140,13 @@ export function DonationsPage({ canEdit }: Props) {
                     </td>
                     <td className="text-sm text-ink-soft max-w-sm truncate">
                       {d.description || "—"}
+                    </td>
+                    <td className="text-center">
+                      <VaultCheckbox
+                        donation={d}
+                        canEdit={canEdit}
+                        onToggled={refresh}
+                      />
                     </td>
                     {canEdit && (
                       <td className="text-right">
@@ -182,6 +190,49 @@ export function DonationsPage({ canEdit }: Props) {
         )}
       </AnimatePresence>
     </section>
+  );
+}
+
+function VaultCheckbox({
+  donation,
+  canEdit,
+  onToggled,
+}: {
+  donation: Donation;
+  canEdit: boolean;
+  onToggled: () => void | Promise<void>;
+}) {
+  // Optimistic UI : affiche le nouvel état tout de suite
+  const [checked, setChecked] = useState(donation.in_vault === 1);
+  const [saving, setSaving] = useState(false);
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!canEdit || saving) return;
+    const next = e.target.checked;
+    setChecked(next);
+    setSaving(true);
+    await updateDonation(donation.id, { in_vault: next });
+    setSaving(false);
+    await onToggled();
+  }
+
+  return (
+    <label
+      className={`inline-flex items-center gap-1.5 ${canEdit ? "cursor-pointer" : "cursor-not-allowed"}`}
+      title={
+        canEdit
+          ? "Cocher quand le don a bien été déposé dans le coffre"
+          : "Modification des dons requise"
+      }
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={handleChange}
+        disabled={!canEdit || saving}
+        className="h-4 w-4 accent-gold-600"
+      />
+    </label>
   );
 }
 

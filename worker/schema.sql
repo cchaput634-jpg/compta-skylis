@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS donations (
   description   TEXT,
   created_by    TEXT NOT NULL,              -- discord_id de celui qui a enregistré
   created_at    INTEGER NOT NULL,
+  in_vault      INTEGER NOT NULL DEFAULT 0, -- 1 = effectivement mis dans le coffre
   FOREIGN KEY (citizen_id) REFERENCES citizens(id) ON DELETE SET NULL
 );
 
