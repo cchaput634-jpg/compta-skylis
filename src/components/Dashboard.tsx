@@ -100,6 +100,12 @@ export function Dashboard() {
   );
 }
 
+/* Palette pour les tranches du donut : or → turquoise */
+const SLICE_PALETTE = [
+  "#d97706", "#f59e0b", "#fbbf24", "#fcd34d", "#fde68a",
+  "#2dd4bf", "#14b8a6", "#0d9488", "#0f766e", "#115e59",
+];
+
 function TopDonorsCard({
   donors,
   loading,
@@ -132,53 +138,159 @@ function TopDonorsCard({
           </span>
         </div>
       ) : (
-        <ol className="space-y-2">
-          {donors.map((d, i) => {
-            const share = grandTotal > 0 ? (d.total / grandTotal) * 100 : 0;
-            const rank = i + 1;
-            return (
-              <li
-                key={`${d.citizen_id ?? "label"}-${d.display_name ?? d.label ?? i}`}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/70 transition-colors"
-              >
-                <RankBadge rank={rank} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="font-medium truncate">
-                      {d.display_name ?? "(donateur retiré)"}
-                    </span>
-                    {d.title && (
-                      <span className="badge-gold badge text-xs">
-                        {d.title}
-                      </span>
-                    )}
-                    {!d.citizen_id && d.label && (
-                      <span className="text-xs italic text-ink-soft">
-                        (libre)
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-sky-100 rounded-full overflow-hidden min-w-20 max-w-xs">
-                      <div
-                        className="h-full bg-gradient-to-r from-gold-300 to-gold-600"
-                        style={{ width: `${Math.max(2, share)}%` }}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+          {/* Classement (gauche, 3/5) */}
+          <ol className="space-y-2 lg:col-span-3">
+            {donors.map((d, i) => {
+              const share = grandTotal > 0 ? (d.total / grandTotal) * 100 : 0;
+              const rank = i + 1;
+              const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
+              return (
+                <li
+                  key={`${d.citizen_id ?? "label"}-${d.display_name ?? d.label ?? i}`}
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/70 transition-colors"
+                >
+                  <RankBadge rank={rank} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span
+                        className="h-2.5 w-2.5 rounded-sm shrink-0"
+                        style={{ backgroundColor: color }}
+                        aria-hidden
                       />
+                      <span className="font-medium truncate">
+                        {d.display_name ?? "(donateur retiré)"}
+                      </span>
+                      {d.title && (
+                        <span className="badge-gold badge text-xs">
+                          {d.title}
+                        </span>
+                      )}
+                      {!d.citizen_id && d.label && (
+                        <span className="text-xs italic text-ink-soft">
+                          (libre)
+                        </span>
+                      )}
                     </div>
-                    <span className="text-xs text-ink-soft whitespace-nowrap">
-                      {d.n} don{d.n > 1 ? "s" : ""}
-                    </span>
+                    <div className="mt-1 flex items-center gap-2">
+                      <div className="h-1.5 flex-1 bg-sky-100 rounded-full overflow-hidden min-w-20 max-w-xs">
+                        <div
+                          className="h-full bg-gradient-to-r from-gold-300 to-gold-600"
+                          style={{ width: `${Math.max(2, share)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-ink-soft whitespace-nowrap">
+                        {d.n} don{d.n > 1 ? "s" : ""}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right font-display text-gold-gradient text-lg">
-                  <Amount n={d.total} size="sm" />
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                  <div className="text-right font-display text-gold-gradient text-lg">
+                    <Amount n={d.total} size="sm" />
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          {/* Donut (droite, 2/5) */}
+          <div className="lg:col-span-2 flex flex-col items-center">
+            <DonutChart donors={donors} grandTotal={grandTotal} />
+            <div className="mt-2 text-center">
+              <div className="text-xs font-display uppercase tracking-wider text-ink-soft">
+                Total des dons
+              </div>
+              <div className="font-display text-gold-gradient text-xl">
+                <Amount n={grandTotal} size="md" />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
+  );
+}
+
+function DonutChart({
+  donors,
+  grandTotal,
+}: {
+  donors: TopDonor[];
+  grandTotal: number;
+}) {
+  const size = 220;
+  const thickness = 30;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = (size - thickness) / 2;
+  const circumference = 2 * Math.PI * r;
+
+  if (grandTotal <= 0) return null;
+
+  let acc = 0;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className="max-w-full h-auto"
+      role="img"
+      aria-label="Répartition des dons par donateur"
+    >
+      {/* Piste de fond */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke="rgba(254, 243, 199, 0.5)"
+        strokeWidth={thickness}
+      />
+      {donors.map((d, i) => {
+        const share = d.total / grandTotal;
+        const dash = share * circumference;
+        const rotation = acc * 360 - 90;
+        acc += share;
+        const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
+        return (
+          <circle
+            key={`${d.citizen_id ?? "label"}-${i}`}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth={thickness}
+            strokeDasharray={`${dash} ${circumference - dash}`}
+            strokeDashoffset={0}
+            transform={`rotate(${rotation} ${cx} ${cy})`}
+            style={{ transition: "stroke-dasharray 0.4s" }}
+          >
+            <title>
+              {`${d.display_name ?? d.label ?? "—"} : ${Math.round(share * 100)} %`}
+            </title>
+          </circle>
+        );
+      })}
+      {/* Centre : nombre de donateurs */}
+      <text
+        x={cx}
+        y={cy - 4}
+        textAnchor="middle"
+        className="font-display fill-gold-800"
+        style={{ fontSize: 28 }}
+      >
+        {donors.length}
+      </text>
+      <text
+        x={cx}
+        y={cy + 20}
+        textAnchor="middle"
+        className="fill-ink-soft"
+        style={{ fontSize: 11, letterSpacing: "0.08em" }}
+      >
+        {donors.length > 1 ? "DONATEURS" : "DONATEUR"}
+      </text>
+    </svg>
   );
 }
 
