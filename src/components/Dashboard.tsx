@@ -208,9 +208,9 @@ function TopDonorsCard({
             })}
           </ol>
 
-          {/* Donut + légende (droite, 2/5) */}
-          <div className="lg:col-span-2 flex flex-col items-center">
-            <DonutChart donors={donors} grandTotal={grandTotal} />
+          {/* Histogramme (droite, 2/5) */}
+          <div className="lg:col-span-2 flex flex-col">
+            <BarChart donors={donors} />
             <div className="mt-3 text-center">
               <div className="text-xs font-display uppercase tracking-wider text-ink-soft">
                 Total des dons
@@ -219,32 +219,6 @@ function TopDonorsCard({
                 <Amount n={grandTotal} size="md" />
               </div>
             </div>
-
-            {/* Légende */}
-            <ul className="mt-4 w-full space-y-1 text-sm">
-              {donors.map((d, i) => {
-                const share = grandTotal > 0 ? (d.total / grandTotal) * 100 : 0;
-                const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
-                return (
-                  <li
-                    key={`legend-${d.citizen_id ?? "label"}-${i}`}
-                    className="flex items-center gap-2"
-                  >
-                    <span
-                      className="h-3 w-3 rounded-sm shrink-0"
-                      style={{ backgroundColor: color }}
-                      aria-hidden
-                    />
-                    <span className="flex-1 truncate">
-                      {d.display_name ?? d.label ?? "—"}
-                    </span>
-                    <span className="text-ink-soft whitespace-nowrap font-display tracking-wider">
-                      {share.toFixed(1)} %
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
           </div>
         </div>
       )}
@@ -252,77 +226,100 @@ function TopDonorsCard({
   );
 }
 
-function DonutChart({
-  donors,
-  grandTotal,
-}: {
-  donors: TopDonor[];
-  grandTotal: number;
-}) {
-  const size = 220;
-  const thickness = 30;
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = (size - thickness) / 2;
-  const circumference = 2 * Math.PI * r;
+function BarChart({ donors }: { donors: TopDonor[] }) {
+  const maxAmount = Math.max(1, ...donors.map((d) => d.total));
 
-  if (grandTotal <= 0) return null;
+  // Dimensions SVG
+  const padLeft = 10;
+  const padRight = 10;
+  const padTop = 24; // place pour les montants au-dessus
+  const padBottom = 58; // place pour les noms penchés
+  const chartH = 180;
+  const barGap = 6;
+  const barW = Math.max(14, Math.floor((300 - padLeft - padRight) / donors.length) - barGap);
+  const width = padLeft + padRight + donors.length * (barW + barGap) - barGap;
+  const height = padTop + chartH + padBottom;
 
-  let acc = 0;
+  // Lignes de grille Y (25 / 50 / 75 / 100 %)
+  const gridLines = [0, 0.25, 0.5, 0.75, 1];
+
+  const nf = new Intl.NumberFormat("fr-FR");
+
   return (
     <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      className="max-w-full h-auto"
+      viewBox={`0 0 ${width} ${height}`}
+      className="w-full h-auto max-w-full"
       role="img"
-      aria-label="Répartition des dons par donateur"
+      aria-label="Histogramme des dons par donateur"
     >
-      {/* Piste de fond */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={r}
-        fill="none"
-        stroke="rgba(254, 243, 199, 0.5)"
-        strokeWidth={thickness}
-      />
-      {donors.map((d, i) => {
-        const share = d.total / grandTotal;
-        const dash = share * circumference;
-        const rotation = acc * 360 - 90;
-        acc += share;
-        const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
+      {/* Grille horizontale */}
+      {gridLines.map((g) => {
+        const y = padTop + chartH - g * chartH;
         return (
-          <circle
-            key={`${d.citizen_id ?? "label"}-${i}`}
-            cx={cx}
-            cy={cy}
-            r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth={thickness}
-            strokeDasharray={`${dash} ${circumference - dash}`}
-            strokeDashoffset={0}
-            transform={`rotate(${rotation} ${cx} ${cy})`}
-            style={{ transition: "stroke-dasharray 0.4s" }}
-          >
-            <title>
-              {`${d.display_name ?? d.label ?? "—"} : ${Math.round(share * 100)} %`}
-            </title>
-          </circle>
+          <line
+            key={g}
+            x1={padLeft}
+            x2={width - padRight}
+            y1={y}
+            y2={y}
+            stroke="rgba(252, 211, 77, 0.3)"
+            strokeDasharray={g === 0 ? undefined : "2 3"}
+            strokeWidth={g === 0 ? 1.2 : 1}
+          />
         );
       })}
-      {/* Centre : juste le nombre de donateurs, discrètement */}
-      <text
-        x={cx}
-        y={cy + 6}
-        textAnchor="middle"
-        className="font-display fill-gold-800"
-        style={{ fontSize: 36 }}
-      >
-        {donors.length}
-      </text>
+
+      {donors.map((d, i) => {
+        const h = (d.total / maxAmount) * chartH;
+        const x = padLeft + i * (barW + barGap);
+        const y = padTop + chartH - h;
+        const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
+        const fullName = d.display_name ?? d.label ?? "—";
+        const shortName =
+          fullName.length > 10 ? fullName.slice(0, 10) + "…" : fullName;
+        const nameCx = x + barW / 2;
+        const nameCy = padTop + chartH + 10;
+        return (
+          <g key={`${d.citizen_id ?? "label"}-${i}`}>
+            {/* Montant au-dessus */}
+            <text
+              x={x + barW / 2}
+              y={y - 6}
+              textAnchor="middle"
+              className="fill-gold-800 font-display"
+              style={{ fontSize: 11 }}
+            >
+              {nf.format(d.total)}
+            </text>
+            {/* La barre */}
+            <rect
+              x={x}
+              y={y}
+              width={barW}
+              height={h}
+              rx={3}
+              fill={color}
+              style={{ transition: "y 0.3s, height 0.3s" }}
+            >
+              <title>
+                {fullName} : {nf.format(d.total)} Couronnes ({d.n} don
+                {d.n > 1 ? "s" : ""})
+              </title>
+            </rect>
+            {/* Nom en bas, penché */}
+            <text
+              x={nameCx}
+              y={nameCy}
+              textAnchor="end"
+              className="fill-ink-soft"
+              style={{ fontSize: 10 }}
+              transform={`rotate(-40 ${nameCx} ${nameCy})`}
+            >
+              {shortName}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
