@@ -233,16 +233,14 @@ function BarChart({ donors }: { donors: TopDonor[] }) {
   const padLeft = 10;
   const padRight = 10;
   const padTop = 24; // place pour les montants au-dessus
-  const padBottom = 58; // place pour les noms penchés
+  const padBottom = 36; // place pour les badges de rang
   const chartH = 180;
-  const barGap = 6;
-  const barW = Math.max(14, Math.floor((300 - padLeft - padRight) / donors.length) - barGap);
+  const barGap = 8;
+  const barW = Math.max(18, Math.floor((300 - padLeft - padRight) / donors.length) - barGap);
   const width = padLeft + padRight + donors.length * (barW + barGap) - barGap;
   const height = padTop + chartH + padBottom;
 
-  // Lignes de grille Y (25 / 50 / 75 / 100 %)
   const gridLines = [0, 0.25, 0.5, 0.75, 1];
-
   const nf = new Intl.NumberFormat("fr-FR");
 
   return (
@@ -252,6 +250,21 @@ function BarChart({ donors }: { donors: TopDonor[] }) {
       role="img"
       aria-label="Histogramme des dons par donateur"
     >
+      <defs>
+        <linearGradient id="rank-gold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fcd34d" />
+          <stop offset="1" stopColor="#b45309" />
+        </linearGradient>
+        <linearGradient id="rank-silver" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#e2e8f0" />
+          <stop offset="1" stopColor="#64748b" />
+        </linearGradient>
+        <linearGradient id="rank-bronze" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fbbf24" />
+          <stop offset="1" stopColor="#b45309" />
+        </linearGradient>
+      </defs>
+
       {/* Grille horizontale */}
       {gridLines.map((g) => {
         const y = padTop + chartH - g * chartH;
@@ -275,15 +288,14 @@ function BarChart({ donors }: { donors: TopDonor[] }) {
         const y = padTop + chartH - h;
         const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
         const fullName = d.display_name ?? d.label ?? "—";
-        const shortName =
-          fullName.length > 10 ? fullName.slice(0, 10) + "…" : fullName;
-        const nameCx = x + barW / 2;
-        const nameCy = padTop + chartH + 10;
+        const rank = i + 1;
+        const cx = x + barW / 2;
+        const badgeCy = padTop + chartH + 16;
         return (
           <g key={`${d.citizen_id ?? "label"}-${i}`}>
             {/* Montant au-dessus */}
             <text
-              x={x + barW / 2}
+              x={cx}
               y={y - 6}
               textAnchor="middle"
               className="fill-gold-800 font-display"
@@ -302,25 +314,73 @@ function BarChart({ donors }: { donors: TopDonor[] }) {
               style={{ transition: "y 0.3s, height 0.3s" }}
             >
               <title>
-                {fullName} : {nf.format(d.total)} Couronnes ({d.n} don
-                {d.n > 1 ? "s" : ""})
+                {`${rank}. ${fullName} : ${nf.format(d.total)} Couronnes (${d.n} don${d.n > 1 ? "s" : ""})`}
               </title>
             </rect>
-            {/* Nom en bas, penché */}
-            <text
-              x={nameCx}
-              y={nameCy}
-              textAnchor="end"
-              className="fill-ink-soft"
-              style={{ fontSize: 10 }}
-              transform={`rotate(-40 ${nameCx} ${nameCy})`}
-            >
-              {shortName}
-            </text>
+            {/* Badge de rang en bas */}
+            <RankBadgeSVG rank={rank} cx={cx} cy={badgeCy} />
           </g>
         );
       })}
     </svg>
+  );
+}
+
+function RankBadgeSVG({
+  rank,
+  cx,
+  cy,
+}: {
+  rank: number;
+  cx: number;
+  cy: number;
+}) {
+  const r = 11;
+  if (rank === 1) {
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={r} fill="url(#rank-gold)" />
+        {/* Petite couronne */}
+        <path
+          d={`M ${cx - 5} ${cy - 1} L ${cx - 3.5} ${cy - 4} L ${cx - 1.5} ${cy - 1.5} L ${cx} ${cy - 5} L ${cx + 1.5} ${cy - 1.5} L ${cx + 3.5} ${cy - 4} L ${cx + 5} ${cy - 1} L ${cx + 4} ${cy + 3} L ${cx - 4} ${cy + 3} Z`}
+          fill="white"
+        />
+      </g>
+    );
+  }
+  if (rank === 2 || rank === 3) {
+    const gradId = rank === 2 ? "rank-silver" : "rank-bronze";
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={r} fill={`url(#${gradId})`} />
+        {/* Étoile / médaille */}
+        <path
+          d={`M ${cx} ${cy - 5} L ${cx + 1.5} ${cy - 1.3} L ${cx + 5} ${cy - 1} L ${cx + 2.3} ${cy + 1.3} L ${cx + 3.2} ${cy + 5} L ${cx} ${cy + 3} L ${cx - 3.2} ${cy + 5} L ${cx - 2.3} ${cy + 1.3} L ${cx - 5} ${cy - 1} L ${cx - 1.5} ${cy - 1.3} Z`}
+          fill="white"
+        />
+      </g>
+    );
+  }
+  return (
+    <g>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="white"
+        stroke="#5eead4"
+        strokeWidth={1}
+      />
+      <text
+        x={cx}
+        y={cy + 4}
+        textAnchor="middle"
+        className="fill-sky-800"
+        style={{ fontSize: 11, fontFamily: "Cinzel, Georgia, serif" }}
+      >
+        {rank}
+      </text>
+    </g>
   );
 }
 
