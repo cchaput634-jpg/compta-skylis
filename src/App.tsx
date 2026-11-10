@@ -7,6 +7,7 @@ import { Nav, type View } from "@/components/Nav";
 import { Dashboard } from "@/components/Dashboard";
 import { CitizensPage } from "@/components/CitizensPage";
 import { DonationsPage } from "@/components/DonationsPage";
+import { GainsPage } from "@/components/GainsPage";
 import { ExpensesPage } from "@/components/ExpensesPage";
 import { AdminPanel } from "@/components/AdminPanel";
 
@@ -35,6 +36,7 @@ export function App() {
     me.isSuper || me.permissions.includes(p);
   const canSeeCitizens = can("citizens.view") || can("citizens.edit");
   const canSeeDonations = can("donations.view") || can("donations.edit");
+  const canSeeGains = can("gains.view") || can("gains.edit");
   const canSeeExpenses = can("expenses.view") || can("expenses.edit");
 
   async function handleLogout() {
@@ -46,6 +48,7 @@ export function App() {
   // Si la vue courante devient invisible après changement de rôle, bascule
   if (view === "citizens" && !canSeeCitizens) setView("dashboard");
   if (view === "donations" && !canSeeDonations) setView("dashboard");
+  if (view === "gains" && !canSeeGains) setView("dashboard");
   if (view === "expenses" && !canSeeExpenses) setView("dashboard");
 
   return (
@@ -57,6 +60,7 @@ export function App() {
         canManage={me.isSuper || can("manage_users")}
         canSeeCitizens={canSeeCitizens}
         canSeeDonations={canSeeDonations}
+        canSeeGains={canSeeGains}
         canSeeExpenses={canSeeExpenses}
         onOpenAdmin={() => setAdminOpen(true)}
         onLogout={handleLogout}
@@ -69,6 +73,9 @@ export function App() {
         )}
         {view === "donations" && canSeeDonations && (
           <DonationsPage canEdit={can("donations.edit")} />
+        )}
+        {view === "gains" && canSeeGains && (
+          <GainsPage canEdit={can("gains.edit")} />
         )}
         {view === "expenses" && canSeeExpenses && (
           <ExpensesPage canEdit={can("expenses.edit")} />

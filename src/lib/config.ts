@@ -15,6 +15,8 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "citizens.edit": "Modifier les citoyens",
   "donations.view": "Voir les dons",
   "donations.edit": "Enregistrer / modifier les dons",
+  "gains.view": "Voir les gains",
+  "gains.edit": "Enregistrer / modifier les gains",
   "expenses.view": "Voir les dépenses",
   "expenses.edit": "Enregistrer / modifier les dépenses",
 };
@@ -31,6 +33,10 @@ export const PERMISSION_GROUPS: Array<{
   {
     title: "Dons",
     perms: [{ key: "donations.view" }, { key: "donations.edit" }],
+  },
+  {
+    title: "Gains",
+    perms: [{ key: "gains.view" }, { key: "gains.edit" }],
   },
   {
     title: "Dépenses",

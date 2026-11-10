@@ -55,6 +55,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
 
   if (section === "citizens") return handleCitizens(request, env, parts);
   if (section === "donations") return handleDonations(request, env, parts);
+  if (section === "gains") return handleGains(request, env, parts);
   if (section === "expenses") return handleExpenses(request, env, parts);
   if (section === "summary") return handleSummary(request, env, parts);
   if (section === "stats") return handleStats(request, env, parts);
@@ -263,6 +264,110 @@ async function handleDonations(
 }
 
 /* =========================================================
+   GAINS (entrées hors dons de citoyens)
+   ========================================================= */
+
+async function handleGains(
+  request: Request,
+  env: Env,
+  parts: string[],
+): Promise<Response> {
+  // GET /api/gains
+  if (!parts[2] && request.method === "GET") {
+    const guard = await requirePermissionAny(env, request, [
+      "gains.view",
+      "gains.edit",
+    ]);
+    if (guard instanceof Response) return guard;
+    const rows = await env.DB.prepare(
+      `SELECT id, label, category, amount, occurred_at, description, created_by, created_at
+         FROM gains
+        ORDER BY occurred_at DESC, created_at DESC`,
+    ).all();
+    return json(rows.results ?? []);
+  }
+
+  // POST /api/gains
+  if (!parts[2] && request.method === "POST") {
+    const guard = await requirePermission(env, request, "gains.edit");
+    if (guard instanceof Response) return guard;
+    const body = await readJsonBody(request);
+    const label = str(body.label);
+    if (!label) return json({ error: "Intitulé manquant" }, 400);
+    const amount = num(body.amount);
+    if (amount === null || amount <= 0) {
+      return json({ error: "Montant invalide" }, 400);
+    }
+    const occurred = num(body.occurred_at) ?? Date.now();
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    await env.DB.prepare(
+      `INSERT INTO gains
+         (id, label, category, amount, occurred_at, description, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        id,
+        label,
+        str(body.category),
+        amount,
+        occurred,
+        str(body.description),
+        guard.user.discord_id,
+        now,
+      )
+      .run();
+    return json({ id });
+  }
+
+  // PATCH /api/gains/:id
+  if (parts[2] && request.method === "PATCH") {
+    const guard = await requirePermission(env, request, "gains.edit");
+    if (guard instanceof Response) return guard;
+    const id = decodeURIComponent(parts[2]);
+    const existing = await env.DB.prepare(
+      "SELECT id FROM gains WHERE id = ?",
+    )
+      .bind(id)
+      .first();
+    if (!existing) return json({ error: "Gain inconnu" }, 404);
+    const body = await readJsonBody(request);
+    const amount = num(body.amount);
+    const occurred = num(body.occurred_at);
+    await env.DB.prepare(
+      `UPDATE gains
+          SET label       = COALESCE(?, label),
+              category    = ?,
+              amount      = COALESCE(?, amount),
+              occurred_at = COALESCE(?, occurred_at),
+              description = ?
+        WHERE id = ?`,
+    )
+      .bind(
+        str(body.label) || null,
+        str(body.category),
+        amount !== null && amount > 0 ? amount : null,
+        occurred,
+        str(body.description),
+        id,
+      )
+      .run();
+    return json({ ok: true });
+  }
+
+  // DELETE /api/gains/:id
+  if (parts[2] && request.method === "DELETE") {
+    const guard = await requirePermission(env, request, "gains.edit");
+    if (guard instanceof Response) return guard;
+    const id = decodeURIComponent(parts[2]);
+    await env.DB.prepare("DELETE FROM gains WHERE id = ?").bind(id).run();
+    return json({ ok: true });
+  }
+
+  return json({ error: "Route inconnue" }, 404);
+}
+
+/* =========================================================
    DÉPENSES
    ========================================================= */
 
@@ -381,13 +486,19 @@ async function handleSummary(
   const { permissions, isSuper } = await getUserPermissions(env, user.discord_id);
 
   const canViewDon = isSuper || permissions.has("donations.view") || permissions.has("donations.edit");
+  const canViewGain = isSuper || permissions.has("gains.view") || permissions.has("gains.edit");
   const canViewExp = isSuper || permissions.has("expenses.view") || permissions.has("expenses.edit");
   const canViewCit = isSuper || permissions.has("citizens.view") || permissions.has("citizens.edit");
 
-  const [donRow, expRow, citRow] = await Promise.all([
+  const [donRow, gainRow, expRow, citRow] = await Promise.all([
     canViewDon
       ? env.DB.prepare(
           "SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS total FROM donations",
+        ).first<{ n: number; total: number }>()
+      : Promise.resolve({ n: 0, total: 0 }),
+    canViewGain
+      ? env.DB.prepare(
+          "SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS total FROM gains",
         ).first<{ n: number; total: number }>()
       : Promise.resolve({ n: 0, total: 0 }),
     canViewExp
@@ -400,14 +511,17 @@ async function handleSummary(
       : Promise.resolve({ n: 0 }),
   ]);
 
+  // Solde = (dons + gains) - dépenses, calculé seulement si le user voit TOUT
+  const canSeeBalance = canViewDon && canViewGain && canViewExp;
+
   return json({
     donations: canViewDon ? donRow : null,
+    gains: canViewGain ? gainRow : null,
     expenses: canViewExp ? expRow : null,
     citizens: canViewCit ? citRow : null,
-    balance:
-      canViewDon && canViewExp
-        ? (donRow?.total ?? 0) - (expRow?.total ?? 0)
-        : null,
+    balance: canSeeBalance
+      ? (donRow?.total ?? 0) + (gainRow?.total ?? 0) - (expRow?.total ?? 0)
+      : null,
   });
 }
 
@@ -785,6 +899,11 @@ async function ensureSchema(env: Env) {
        description TEXT, created_by TEXT NOT NULL, created_at INTEGER NOT NULL
      )`,
     `CREATE TABLE IF NOT EXISTS expenses (
+       id TEXT PRIMARY KEY, label TEXT NOT NULL, category TEXT,
+       amount INTEGER NOT NULL, occurred_at INTEGER NOT NULL,
+       description TEXT, created_by TEXT NOT NULL, created_at INTEGER NOT NULL
+     )`,
+    `CREATE TABLE IF NOT EXISTS gains (
        id TEXT PRIMARY KEY, label TEXT NOT NULL, category TEXT,
        amount INTEGER NOT NULL, occurred_at INTEGER NOT NULL,
        description TEXT, created_by TEXT NOT NULL, created_at INTEGER NOT NULL

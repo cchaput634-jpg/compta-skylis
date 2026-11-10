@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Coins, Crown, HandCoins, Medal, Scale, Users as UsersIcon } from "lucide-react";
+import { Coins, Crown, HandCoins, Medal, Scale, Sparkles, Users as UsersIcon } from "lucide-react";
 import { fetchSummary, fetchTopDonors } from "@/lib/api";
 import type { Summary, TopDonor } from "@/types";
 import { Amount } from "./Amount";
@@ -34,7 +34,7 @@ export function Dashboard() {
       </p>
       <hr className="section-divider" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           icon={<Scale className="h-5 w-5" />}
           label="Solde du Trésor"
@@ -62,6 +62,23 @@ export function Dashboard() {
           sub={
             summary?.donations
               ? `${summary.donations.n} enregistrement${summary.donations.n > 1 ? "s" : ""}`
+              : undefined
+          }
+          tone="sky"
+        />
+        <StatCard
+          icon={<Sparkles className="h-5 w-5" />}
+          label="Gains"
+          value={
+            loading
+              ? "…"
+              : summary?.gains
+                ? <Amount n={summary.gains.total} size="md" />
+                : "—"
+          }
+          sub={
+            summary?.gains
+              ? `${summary.gains.n} enregistrement${summary.gains.n > 1 ? "s" : ""}`
               : undefined
           }
           tone="sky"
@@ -148,16 +165,12 @@ function TopDonorsCard({
               return (
                 <li
                   key={`${d.citizen_id ?? "label"}-${d.display_name ?? d.label ?? i}`}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/70 transition-colors"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/70 transition-colors border-l-4"
+                  style={{ borderLeftColor: color }}
                 >
                   <RankBadge rank={rank} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <span
-                        className="h-2.5 w-2.5 rounded-sm shrink-0"
-                        style={{ backgroundColor: color }}
-                        aria-hidden
-                      />
                       <span className="font-medium truncate">
                         {d.display_name ?? "(donateur retiré)"}
                       </span>
@@ -175,12 +188,15 @@ function TopDonorsCard({
                     <div className="mt-1 flex items-center gap-2">
                       <div className="h-1.5 flex-1 bg-sky-100 rounded-full overflow-hidden min-w-20 max-w-xs">
                         <div
-                          className="h-full bg-gradient-to-r from-gold-300 to-gold-600"
-                          style={{ width: `${Math.max(2, share)}%` }}
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.max(2, share)}%`,
+                            backgroundColor: color,
+                          }}
                         />
                       </div>
                       <span className="text-xs text-ink-soft whitespace-nowrap">
-                        {d.n} don{d.n > 1 ? "s" : ""}
+                        {share.toFixed(1)} % · {d.n} don{d.n > 1 ? "s" : ""}
                       </span>
                     </div>
                   </div>
@@ -192,10 +208,10 @@ function TopDonorsCard({
             })}
           </ol>
 
-          {/* Donut (droite, 2/5) */}
+          {/* Donut + légende (droite, 2/5) */}
           <div className="lg:col-span-2 flex flex-col items-center">
             <DonutChart donors={donors} grandTotal={grandTotal} />
-            <div className="mt-2 text-center">
+            <div className="mt-3 text-center">
               <div className="text-xs font-display uppercase tracking-wider text-ink-soft">
                 Total des dons
               </div>
@@ -203,6 +219,32 @@ function TopDonorsCard({
                 <Amount n={grandTotal} size="md" />
               </div>
             </div>
+
+            {/* Légende */}
+            <ul className="mt-4 w-full space-y-1 text-sm">
+              {donors.map((d, i) => {
+                const share = grandTotal > 0 ? (d.total / grandTotal) * 100 : 0;
+                const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
+                return (
+                  <li
+                    key={`legend-${d.citizen_id ?? "label"}-${i}`}
+                    className="flex items-center gap-2"
+                  >
+                    <span
+                      className="h-3 w-3 rounded-sm shrink-0"
+                      style={{ backgroundColor: color }}
+                      aria-hidden
+                    />
+                    <span className="flex-1 truncate">
+                      {d.display_name ?? d.label ?? "—"}
+                    </span>
+                    <span className="text-ink-soft whitespace-nowrap font-display tracking-wider">
+                      {share.toFixed(1)} %
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </div>
       )}
@@ -271,24 +313,15 @@ function DonutChart({
           </circle>
         );
       })}
-      {/* Centre : nombre de donateurs */}
+      {/* Centre : juste le nombre de donateurs, discrètement */}
       <text
         x={cx}
-        y={cy - 4}
+        y={cy + 6}
         textAnchor="middle"
         className="font-display fill-gold-800"
-        style={{ fontSize: 28 }}
+        style={{ fontSize: 36 }}
       >
         {donors.length}
-      </text>
-      <text
-        x={cx}
-        y={cy + 20}
-        textAnchor="middle"
-        className="fill-ink-soft"
-        style={{ fontSize: 11, letterSpacing: "0.08em" }}
-      >
-        {donors.length > 1 ? "DONATEURS" : "DONATEUR"}
       </text>
     </svg>
   );

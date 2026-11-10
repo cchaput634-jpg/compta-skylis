@@ -59,6 +59,17 @@ export interface Expense {
   created_at: number;
 }
 
+export interface Gain {
+  id: string;
+  label: string;
+  category: string | null;
+  amount: number;
+  occurred_at: number;
+  description: string | null;
+  created_by: string;
+  created_at: number;
+}
+
 export interface TopDonor {
   citizen_id: string | null;
   display_name: string | null;
@@ -71,6 +82,7 @@ export interface TopDonor {
 
 export interface Summary {
   donations: { n: number; total: number } | null;
+  gains: { n: number; total: number } | null;
   expenses: { n: number; total: number } | null;
   citizens: { n: number } | null;
   balance: number | null;
@@ -83,5 +95,7 @@ export type PermissionKey =
   | "citizens.edit"
   | "donations.view"
   | "donations.edit"
+  | "gains.view"
+  | "gains.edit"
   | "expenses.view"
   | "expenses.edit";

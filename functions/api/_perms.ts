@@ -14,6 +14,8 @@ export const PERMISSIONS = [
   "citizens.edit",
   "donations.view",
   "donations.edit",
+  "gains.view",
+  "gains.edit",
   "expenses.view",
   "expenses.edit",
 ] as const;

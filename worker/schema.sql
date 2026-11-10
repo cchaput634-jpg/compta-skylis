@@ -72,6 +72,21 @@ CREATE TABLE IF NOT EXISTS donations (
 CREATE INDEX IF NOT EXISTS idx_donations_occurred ON donations(occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_donations_citizen ON donations(citizen_id);
 
+/* ===== Gains (entrées autres que dons de citoyens) ===== */
+CREATE TABLE IF NOT EXISTS gains (
+  id           TEXT PRIMARY KEY,
+  label        TEXT NOT NULL,                -- intitulé du gain (ex: Impôts, Tribut, Marché)
+  category     TEXT,                         -- cat. libre
+  amount       INTEGER NOT NULL,
+  occurred_at  INTEGER NOT NULL,
+  description  TEXT,
+  created_by   TEXT NOT NULL,
+  created_at   INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_gains_occurred ON gains(occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gains_category ON gains(category);
+
 /* ===== Dépenses (sorties) ===== */
 CREATE TABLE IF NOT EXISTS expenses (
   id           TEXT PRIMARY KEY,

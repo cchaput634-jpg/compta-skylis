@@ -7,6 +7,7 @@ import type {
   Citizen,
   Donation,
   Expense,
+  Gain,
   MeResponse,
   Role,
   Summary,
@@ -167,6 +168,50 @@ export async function updateDonation(
 
 export async function deleteDonation(id: string): Promise<void> {
   await apiJson<{ ok: boolean }>(`/api/donations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+/* ===== Gains ===== */
+
+export async function fetchGains(): Promise<Gain[]> {
+  return (await apiJson<Gain[]>("/api/gains")) ?? [];
+}
+
+export async function createGain(data: {
+  label: string;
+  category?: string;
+  amount: number;
+  occurred_at?: number;
+  description?: string;
+}): Promise<{ id: string } | { error: string }> {
+  const res = await apiJsonOrError<{ id: string }>("/api/gains", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.data ?? { error: res.error ?? "Erreur inconnue" };
+}
+
+export async function updateGain(
+  id: string,
+  patch: {
+    label?: string;
+    category?: string;
+    amount?: number;
+    occurred_at?: number;
+    description?: string;
+  },
+): Promise<void> {
+  await apiJson<{ ok: boolean }>(`/api/gains/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteGain(id: string): Promise<void> {
+  await apiJson<{ ok: boolean }>(`/api/gains/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }

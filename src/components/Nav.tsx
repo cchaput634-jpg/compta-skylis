@@ -1,7 +1,7 @@
-import { Coins, HandCoins, LayoutDashboard, LogOut, Settings, Users as UsersIcon } from "lucide-react";
+import { Coins, HandCoins, LayoutDashboard, LogOut, Settings, Sparkles, Users as UsersIcon } from "lucide-react";
 import type { DiscordUser } from "@/types";
 
-export type View = "dashboard" | "citizens" | "donations" | "expenses";
+export type View = "dashboard" | "citizens" | "donations" | "gains" | "expenses";
 
 interface Props {
   view: View;
@@ -10,6 +10,7 @@ interface Props {
   canManage: boolean;
   canSeeCitizens: boolean;
   canSeeDonations: boolean;
+  canSeeGains: boolean;
   canSeeExpenses: boolean;
   onOpenAdmin: () => void;
   onLogout: () => void;
@@ -22,6 +23,7 @@ export function Nav({
   canManage,
   canSeeCitizens,
   canSeeDonations,
+  canSeeGains,
   canSeeExpenses,
   onOpenAdmin,
   onLogout,
@@ -66,6 +68,14 @@ export function Nav({
               onClick={() => onView("donations")}
               icon={<HandCoins className="h-4 w-4" />}
               label="Dons"
+            />
+          )}
+          {canSeeGains && (
+            <TabBtn
+              active={view === "gains"}
+              onClick={() => onView("gains")}
+              icon={<Sparkles className="h-4 w-4" />}
+              label="Gains"
             />
           )}
           {canSeeExpenses && (
