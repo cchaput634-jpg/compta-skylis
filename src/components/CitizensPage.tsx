@@ -5,7 +5,11 @@ import {
   createCitizen,
   deleteCitizen,
   fetchCitizens,
+  fetchRoleOptions,
+  fetchUserOptions,
   updateCitizen,
+  type RoleOption,
+  type UserOption,
 } from "@/lib/api";
 import type { Citizen } from "@/types";
 
@@ -176,11 +180,32 @@ function CitizenFormModal({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(citizen?.name ?? "");
+  // Le "Titre" stocke le NOM du rôle choisi (pas son id), pour rester
+  // lisible si le rôle est renommé/supprimé plus tard.
   const [title, setTitle] = useState(citizen?.title ?? "");
   const [discordId, setDiscordId] = useState(citizen?.discord_id ?? "");
   const [notes, setNotes] = useState(citizen?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [u, r] = await Promise.all([fetchUserOptions(), fetchRoleOptions()]);
+      if (!cancelled) {
+        setUsers(u);
+        setRoles(r);
+        setOptionsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSave() {
     if (!name.trim()) {
@@ -248,21 +273,52 @@ function CitizenFormModal({
           </div>
           <div>
             <label className="label">Titre / Rang</label>
-            <input
-              className="input"
+            <select
+              className="select"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Zéphyr, Dignitaire, Enfant du vent…"
-            />
+              disabled={optionsLoading}
+            >
+              <option value="">— Aucun —</option>
+              {/* Garde l'ancienne valeur si elle ne matche plus un rôle */}
+              {title && !roles.some((r) => r.name === title) && (
+                <option value={title}>{title} (ancien)</option>
+              )}
+              {roles.map((r) => (
+                <option key={r.id} value={r.name}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-ink-soft mt-1 italic">
+              Les titres viennent des rôles créés dans l'administration.
+            </p>
           </div>
           <div>
-            <label className="label">Pseudo / ID Discord</label>
-            <input
-              className="input"
+            <label className="label">Compte Discord lié</label>
+            <select
+              className="select"
               value={discordId}
               onChange={(e) => setDiscordId(e.target.value)}
-              placeholder="Optionnel"
-            />
+              disabled={optionsLoading}
+            >
+              <option value="">— Aucun —</option>
+              {/* Garde l'ancienne valeur si elle ne matche plus un user connu */}
+              {discordId &&
+                !users.some((u) => u.discord_id === discordId) && (
+                  <option value={discordId}>
+                    {discordId} (non connecté)
+                  </option>
+                )}
+              {users.map((u) => (
+                <option key={u.discord_id} value={u.discord_id}>
+                  {u.username}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-ink-soft mt-1 italic">
+              Liste des personnes qui se sont déjà connectées au site.
+            </p>
           </div>
           <div>
             <label className="label">Notes</label>

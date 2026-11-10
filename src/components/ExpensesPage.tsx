@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Coins, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import {
   createExpense,
   deleteExpense,
   fetchExpenses,
   updateExpense,
 } from "@/lib/api";
-import { dateInputValue, formatAmount, formatDate, parseDateInput } from "@/lib/format";
+import { dateInputValue, formatDate, parseDateInput } from "@/lib/format";
 import type { Expense } from "@/types";
+import { Amount } from "./Amount";
 
 interface Props {
   canEdit: boolean;
@@ -54,7 +55,7 @@ export function ExpensesPage({ canEdit }: Props) {
           <div className="card px-3 py-2 text-sm">
             <span className="text-ink-soft mr-2">Total :</span>
             <span className="font-display text-sky-gradient text-lg">
-              {formatAmount(total)}
+              <Amount n={total} size="md" />
             </span>
           </div>
           {canEdit && (
@@ -117,10 +118,9 @@ export function ExpensesPage({ canEdit }: Props) {
                         <span className="text-ink-soft/60">—</span>
                       )}
                     </td>
-                    <td className="text-right font-display text-sky-gradient text-lg whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1">
-                        <Coins className="h-3.5 w-3.5 text-sky-700" />
-                        {formatAmount(e.amount)}
+                    <td className="text-right whitespace-nowrap">
+                      <span className="font-display text-sky-gradient text-lg">
+                        <Amount n={e.amount} size="sm" />
                       </span>
                     </td>
                     <td className="text-sm text-ink-soft max-w-sm truncate">

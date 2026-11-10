@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { HandCoins, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import {
   createDonation,
   deleteDonation,
@@ -8,9 +8,10 @@ import {
   fetchDonations,
   updateDonation,
 } from "@/lib/api";
-import { formatAmount, formatDate, dateInputValue, parseDateInput } from "@/lib/format";
+import { formatDate, dateInputValue, parseDateInput } from "@/lib/format";
 import type { Citizen, Donation } from "@/types";
 import { CitizenPicker, type PickerValue } from "./CitizenPicker";
+import { Amount } from "./Amount";
 
 interface Props {
   canEdit: boolean;
@@ -39,7 +40,7 @@ export function DonationsPage({ canEdit }: Props) {
   );
 
   async function handleDelete(d: Donation) {
-    if (!confirm(`Supprimer ce don de ${formatAmount(d.amount)} ?`)) return;
+    if (!confirm(`Supprimer ce don de ${new Intl.NumberFormat("fr-FR").format(d.amount)} Couronnes ?`)) return;
     await deleteDonation(d.id);
     await refresh();
   }
@@ -59,7 +60,7 @@ export function DonationsPage({ canEdit }: Props) {
           <div className="card-gold px-3 py-2 text-sm">
             <span className="text-ink-soft mr-2">Total :</span>
             <span className="font-display text-gold-gradient text-lg">
-              {formatAmount(total)}
+              <Amount n={total} size="md" />
             </span>
           </div>
           {canEdit && (
@@ -131,10 +132,9 @@ export function DonationsPage({ canEdit }: Props) {
                         <span className="text-ink-soft/60">—</span>
                       )}
                     </td>
-                    <td className="text-right font-display text-gold-gradient text-lg whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1">
-                        <HandCoins className="h-3.5 w-3.5 text-gold-700" />
-                        {formatAmount(d.amount)}
+                    <td className="text-right whitespace-nowrap">
+                      <span className="font-display text-gold-gradient text-lg">
+                        <Amount n={d.amount} size="sm" />
                       </span>
                     </td>
                     <td className="text-sm text-ink-soft max-w-sm truncate">

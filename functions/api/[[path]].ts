@@ -58,6 +58,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (section === "expenses") return handleExpenses(request, env, parts);
   if (section === "summary") return handleSummary(request, env, parts);
   if (section === "stats") return handleStats(request, env, parts);
+  if (section === "options") return handleOptions(request, env, parts);
   if (section === "admin") return handleAdmin(request, env, parts);
 
   return json({ error: "Route inconnue" }, 404);
@@ -462,6 +463,47 @@ async function handleStats(
         last_donation: number;
       }>();
 
+    return json(rows.results ?? []);
+  }
+
+  return json({ error: "Route inconnue" }, 404);
+}
+
+/* =========================================================
+   OPTIONS — menus déroulants (utilisateurs connectés, rôles)
+   Lisible par quiconque peut éditer les citoyens.
+   ========================================================= */
+
+async function handleOptions(
+  request: Request,
+  env: Env,
+  parts: string[],
+): Promise<Response> {
+  if (request.method !== "GET") return json({ error: "Route inconnue" }, 404);
+
+  // GET /api/options/users — utilisateurs Discord qui se sont connectés
+  if (parts[2] === "users" && !parts[3]) {
+    const guard = await requirePermissionAny(env, request, [
+      "citizens.edit",
+      "manage_users",
+    ]);
+    if (guard instanceof Response) return guard;
+    const rows = await env.DB.prepare(
+      "SELECT discord_id, username, avatar FROM users ORDER BY username COLLATE NOCASE",
+    ).all<{ discord_id: string; username: string; avatar: string | null }>();
+    return json(rows.results ?? []);
+  }
+
+  // GET /api/options/roles — rôles disponibles (hors Super Admin)
+  if (parts[2] === "roles" && !parts[3]) {
+    const guard = await requirePermissionAny(env, request, [
+      "citizens.edit",
+      "manage_users",
+    ]);
+    if (guard instanceof Response) return guard;
+    const rows = await env.DB.prepare(
+      "SELECT id, name FROM roles WHERE is_super = 0 ORDER BY name COLLATE NOCASE",
+    ).all<{ id: string; name: string }>();
     return json(rows.results ?? []);
   }
 

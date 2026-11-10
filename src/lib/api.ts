@@ -70,6 +70,26 @@ export async function fetchTopDonors(limit = 10): Promise<TopDonor[]> {
   return (await apiJson<TopDonor[]>(`/api/stats/top-donors?limit=${limit}`)) ?? [];
 }
 
+/* ===== Options (dropdowns) ===== */
+
+export interface UserOption {
+  discord_id: string;
+  username: string;
+  avatar: string | null;
+}
+export interface RoleOption {
+  id: string;
+  name: string;
+}
+
+export async function fetchUserOptions(): Promise<UserOption[]> {
+  return (await apiJson<UserOption[]>("/api/options/users")) ?? [];
+}
+
+export async function fetchRoleOptions(): Promise<RoleOption[]> {
+  return (await apiJson<RoleOption[]>("/api/options/roles")) ?? [];
+}
+
 /* ===== Citoyens ===== */
 
 export async function fetchCitizens(): Promise<Citizen[]> {
